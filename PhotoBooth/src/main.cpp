@@ -48,15 +48,26 @@ int main(int argc, char **argv)
     PhotoPrinter printer;
     printer.setCamera(*camera);
 
+    QHBoxLayout *buttonLayout = new QHBoxLayout;
     QPushButton *captureButton = new QPushButton(QApplication::translate("capture",
                                                                          "Take Photo"));
-    layout->addWidget(captureButton);
+    buttonLayout->addWidget(captureButton, 1);
     
     QObject::connect(captureButton,
                      SIGNAL(clicked()),
                      &printer,
                      SLOT(capture()));
 
+    QPushButton *settingsButton = new QPushButton(QIcon("cog.png"),
+                                                  QApplication::translate("settingsText", "Settings"));
+    buttonLayout->addWidget(settingsButton);
+
+    QObject::connect(settingsButton,
+                     SIGNAL(clicked()),
+                     &printer,
+                     SLOT(setPrefs()));
+
+    layout->addLayout(buttonLayout);
     window.setLayout(layout);
     
     window.resize(640, 500);

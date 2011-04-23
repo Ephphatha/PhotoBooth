@@ -6,3 +6,4 @@
 *.sdf
 /Release/opencv_core220.dll
 /Release/opencv_highgui220.dll
+*.opensdf
