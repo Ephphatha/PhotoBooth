@@ -41,6 +41,8 @@ public:
 
 public slots:
   void capture();
+
+  void setPrefs();
   
   void drawPage(QPrinter *printer);
 
@@ -48,6 +50,20 @@ private:
   int timer;
   std::vector<QPixmap> frames;
   CameraWidget *camera;
+
+  QDialog settingsDialog;
+  QLineEdit *copiesInput;
+  QCheckBox *previewCheck;
+
+  QPushButton *callingButton;
+
+  struct Settings
+  {
+    bool printPreview;
+    unsigned int copies;
+
+    Settings();
+  } settings;
 
   void timerEvent(QTimerEvent*);
 

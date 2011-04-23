@@ -123,7 +123,7 @@
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="include\PhotoPrinter.h">
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">C:\Qt\4.7.2\bin\moc.exe "%(FullPath)" -o "%(RootDir)%(Directory)moc_%(Filename).cpp"</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">C:\Qt\4.7.2\bin\moc.exe "%(FullPath)" -o "$(ProjectDir)src\moc_%(Filename).cpp"</Command>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Compiling %(Filename)%(Extension) using MOC</Message>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(ProjectDir)src\moc_%(Filename).cpp</Outputs>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">C:\Qt\4.7.2\bin\moc.exe "%(FullPath)" -o "%(RootDir)%(Directory)moc_%(Filename).cpp"</Command>

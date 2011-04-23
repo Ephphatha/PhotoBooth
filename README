@@ -1,0 +1,3 @@
+A photobooth style program.
+
+Captures images from the default webcam, and sends them to the default printer.

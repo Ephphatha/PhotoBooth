@@ -27,11 +27,41 @@
 
 #include "CameraWidget.h"
 
+PhotoPrinter::Settings::Settings()
+  : printPreview(false),
+  copies(2)
+{
+}
+
 PhotoPrinter::PhotoPrinter(QObject *parent)
   : QObject(parent),
   timer(0),
-  camera(0)
+  camera(0),
+  callingButton(0),
+  copiesInput(new QLineEdit),
+  previewCheck(new QCheckBox)
 {
+  QFormLayout *layout = new QFormLayout;
+  QIntValidator *positiveInt = new QIntValidator;
+  positiveInt->setBottom(0);
+  this->copiesInput->setValidator(positiveInt);
+  layout->addRow(tr("Copies:"), this->copiesInput);
+  layout->addRow(tr("Preview output:"), this->previewCheck);
+
+  QHBoxLayout *subLayout = new QHBoxLayout;
+  QPushButton *save = new QPushButton(tr("Save Changes"));
+  save->setDefault(true);
+  subLayout->addWidget(save);
+
+  QObject::connect(save, SIGNAL(clicked()), &this->settingsDialog, SLOT(accept()));
+
+  QPushButton *cancel = new QPushButton(tr("Cancel"));
+  subLayout->addWidget(cancel);
+
+  QObject::connect(cancel, SIGNAL(clicked()), &this->settingsDialog, SLOT(reject()));
+
+  layout->addRow(subLayout);
+  this->settingsDialog.setLayout(layout);
 }
 
 PhotoPrinter::~PhotoPrinter()
@@ -48,6 +78,24 @@ void PhotoPrinter::capture()
   if (this->camera && !this->timer)
   {
     this->timer = this->startTimer(1000);
+    if (QPushButton *sender = dynamic_cast<QPushButton*>(QObject::sender()))
+    {
+      this->callingButton = sender;
+      this->callingButton->setText(tr("Taking photos, smile :)"));
+      this->callingButton->setDisabled(true);
+    }
+  }
+}
+
+void PhotoPrinter::setPrefs()
+{
+  this->copiesInput->setText(QString::number(this->settings.copies));
+  this->previewCheck->setChecked(this->settings.printPreview);
+
+  if (this->settingsDialog.exec() == QDialog::Accepted)
+  {
+    this->settings.copies = this->copiesInput->text().toInt();
+    this->settings.printPreview = this->previewCheck->isChecked();
   }
 }
 
@@ -58,6 +106,12 @@ void PhotoPrinter::timerEvent(QTimerEvent*)
   {
     this->killTimer(this->timer);
     this->timer = 0;
+    if (this->callingButton)
+    {
+      this->callingButton->setEnabled(true);
+      this->callingButton->setText(tr("Take Photo"));
+      this->callingButton = 0;
+    }
     this->Print();
   }
 }
@@ -65,17 +119,22 @@ void PhotoPrinter::timerEvent(QTimerEvent*)
 void PhotoPrinter::Print()
 {
   QPrinter *printer = new QPrinter(QPrinter::HighResolution);
-  QPrintPreviewDialog printPreview(printer);
+  
+  if (this->settings.printPreview)
+  {
+    QPrintPreviewDialog printPreview(printer);
 
-  QObject::connect(&printPreview,
-                   SIGNAL(paintRequested(QPrinter *)),
-                   this,
-                   SLOT(drawPage(QPrinter *)));
+    QObject::connect(&printPreview,
+                     SIGNAL(paintRequested(QPrinter *)),
+                     this,
+                     SLOT(drawPage(QPrinter *)));
 
-  printPreview.exec();
-
-  //printer->setOutputFileName("print.ps");
-  //this->drawPage(printer);
+    printPreview.exec();
+  }
+  else
+  {
+    this->drawPage(printer);
+  }
 
   this->frames.clear();
 }
@@ -97,12 +156,19 @@ void PhotoPrinter::drawPage(QPrinter *printer)
 
   int imageHeight = static_cast<int>(static_cast<float>(pageArea.height()) / static_cast<float>(this->frames.size()) * 0.8f);
 
-  for (unsigned int i = 0; i < this->frames.size(); ++i)
+  for (unsigned int page = 1; page <= this->settings.copies; ++page)
   {
-    int targetWidth = imageHeight * this->frames[i].width() / this->frames[i].height();
-    QRect paintArea = QRect(halfPageWidth - (targetWidth / 2), buffer + i * (imageHeight + 2 * buffer), targetWidth, imageHeight);
-    painter.drawPixmap(paintArea, this->frames[i]);
-    painter.drawRect(paintArea);
+    for (unsigned int i = 0; i < this->frames.size(); ++i)
+    {
+      int targetWidth = imageHeight * this->frames[i].width() / this->frames[i].height();
+      QRect paintArea = QRect(halfPageWidth - (targetWidth / 2), buffer + i * (imageHeight + 2 * buffer), targetWidth, imageHeight);
+      painter.drawPixmap(paintArea, this->frames[i]);
+      painter.drawRect(paintArea);
+    }
+    if (page != this->settings.copies)
+    {
+      printer->newPage();
+    }
   }
 
   painter.end();
