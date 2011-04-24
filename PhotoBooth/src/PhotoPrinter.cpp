@@ -29,7 +29,10 @@
 
 PhotoPrinter::Settings::Settings()
   : printPreview(false),
-  copies(2)
+  copies(2),
+  numFrames(4),
+  framesPerPage(4),
+  delayPerFrame(1)
 {
 }
 
@@ -39,13 +42,28 @@ PhotoPrinter::PhotoPrinter(QObject *parent)
   camera(0),
   callingButton(0),
   copiesInput(new QLineEdit),
+  numFramesInput(new QLineEdit),
+  framesPPInput(new QLineEdit),
+  delayInput(new QLineEdit),
   previewCheck(new QCheckBox)
 {
   QFormLayout *layout = new QFormLayout;
+
   QIntValidator *positiveInt = new QIntValidator;
-  positiveInt->setBottom(0);
+  positiveInt->setBottom(1);
+
   this->copiesInput->setValidator(positiveInt);
-  layout->addRow(tr("Copies:"), this->copiesInput);
+  this->numFramesInput->setValidator(positiveInt);
+  this->framesPPInput->setValidator(positiveInt);
+
+  QDoubleValidator *positiveFloat = new QDoubleValidator;
+  positiveFloat->setBottom(0.0);
+  this->delayInput->setValidator(positiveFloat);
+
+  layout->addRow(tr("Number of Photos:"), this->numFramesInput);
+  layout->addRow(tr("Seconds between photos:"), this->delayInput);
+  layout->addRow(tr("Photos per page:"), this->framesPPInput);
+  layout->addRow(tr("Number of Copies:"), this->copiesInput);
   layout->addRow(tr("Preview output:"), this->previewCheck);
 
   QHBoxLayout *subLayout = new QHBoxLayout;
@@ -77,7 +95,8 @@ void PhotoPrinter::capture()
 {
   if (this->camera && !this->timer)
   {
-    this->timer = this->startTimer(1000);
+    this->timer = this->startTimer(static_cast<int>(this->settings.delayPerFrame * 1000.0f));
+
     if (QPushButton *sender = dynamic_cast<QPushButton*>(QObject::sender()))
     {
       this->callingButton = sender;
@@ -89,11 +108,17 @@ void PhotoPrinter::capture()
 
 void PhotoPrinter::setPrefs()
 {
+  this->numFramesInput->setText(QString::number(this->settings.numFrames));
+  this->delayInput->setText(QString::number(this->settings.delayPerFrame));
+  this->framesPPInput->setText(QString::number(this->settings.framesPerPage));
   this->copiesInput->setText(QString::number(this->settings.copies));
   this->previewCheck->setChecked(this->settings.printPreview);
 
   if (this->settingsDialog.exec() == QDialog::Accepted)
   {
+    this->settings.numFrames = this->numFramesInput->text().toInt();
+    this->settings.delayPerFrame = this->delayInput->text().toFloat();
+    this->settings.framesPerPage = this->framesPPInput->text().toInt();
     this->settings.copies = this->copiesInput->text().toInt();
     this->settings.printPreview = this->previewCheck->isChecked();
   }
@@ -102,17 +127,20 @@ void PhotoPrinter::setPrefs()
 void PhotoPrinter::timerEvent(QTimerEvent*)
 {
   this->frames.push_back(this->camera->Capture());
-  if (this->frames.size() >= 4)
+
+  if (this->frames.size() >= this->settings.numFrames)
   {
     this->killTimer(this->timer);
     this->timer = 0;
+    
+    this->Print();
+
     if (this->callingButton)
     {
       this->callingButton->setEnabled(true);
       this->callingButton->setText(tr("Take Photo"));
       this->callingButton = 0;
     }
-    this->Print();
   }
 }
 
@@ -150,21 +178,34 @@ void PhotoPrinter::drawPage(QPrinter *printer)
   
   QRect pageArea = printer->pageRect();
 
-  int halfPageWidth = pageArea.width() / 2;
+  int targetBuffer = static_cast<int>(static_cast<float>(pageArea.height()) / static_cast<float>(this->settings.framesPerPage) * 0.1f);
 
-  int buffer = static_cast<int>(static_cast<float>(pageArea.height()) / static_cast<float>(this->frames.size()) * 0.1f);
-
-  int imageHeight = static_cast<int>(static_cast<float>(pageArea.height()) / static_cast<float>(this->frames.size()) * 0.8f);
+  int targetHeight = static_cast<int>(static_cast<float>(pageArea.height()) / static_cast<float>(this->settings.framesPerPage) * 0.8f);
+  
+  int targetWidth = static_cast<int>(static_cast<float>(pageArea.width()) * 0.9f);
 
   for (unsigned int page = 1; page <= this->settings.copies; ++page)
   {
     for (unsigned int i = 0; i < this->frames.size(); ++i)
     {
-      int targetWidth = imageHeight * this->frames[i].width() / this->frames[i].height();
-      QRect paintArea = QRect(halfPageWidth - (targetWidth / 2), buffer + i * (imageHeight + 2 * buffer), targetWidth, imageHeight);
+      if (i && i % this->settings.framesPerPage == 0)
+      {
+        printer->newPage();
+      }
+
+      int imageWidth = std::min(targetHeight * this->frames[i].width() / this->frames[i].height(), targetWidth);
+      int imageHeight = imageWidth * this->frames[i].height() / this->frames[i].width();
+      int buffer = targetBuffer + (targetHeight - imageHeight) / 2;
+
+      QRect paintArea = QRect(pageArea.width() / 2 - imageWidth / 2,
+                              buffer + (i % this->settings.framesPerPage) * (targetHeight + 2 * buffer),
+                              imageWidth,
+                              imageHeight);
+
       painter.drawPixmap(paintArea, this->frames[i]);
       painter.drawRect(paintArea);
     }
+
     if (page != this->settings.copies)
     {
       printer->newPage();

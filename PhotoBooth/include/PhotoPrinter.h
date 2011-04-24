@@ -53,6 +53,9 @@ private:
 
   QDialog settingsDialog;
   QLineEdit *copiesInput;
+  QLineEdit *numFramesInput;
+  QLineEdit *framesPPInput;
+  QLineEdit *delayInput;
   QCheckBox *previewCheck;
 
   QPushButton *callingButton;
@@ -61,6 +64,9 @@ private:
   {
     bool printPreview;
     unsigned int copies;
+    unsigned int numFrames;
+    unsigned int framesPerPage;
+    float delayPerFrame;
 
     Settings();
   } settings;
