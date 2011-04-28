@@ -32,7 +32,8 @@ PhotoPrinter::Settings::Settings()
   copies(2),
   numFrames(4),
   framesPerPage(4),
-  delayPerFrame(1)
+  delayPerFrame(1),
+  framesToStall(5)
 {
 }
 
@@ -126,7 +127,7 @@ void PhotoPrinter::setPrefs()
 
 void PhotoPrinter::timerEvent(QTimerEvent*)
 {
-  this->frames.push_back(this->camera->Capture());
+  this->frames.push_back(this->camera->Capture(this->settings.framesToStall));
 
   if (this->frames.size() >= this->settings.numFrames)
   {
@@ -138,6 +139,7 @@ void PhotoPrinter::timerEvent(QTimerEvent*)
     if (this->callingButton)
     {
       this->callingButton->setEnabled(true);
+      this->callingButton->setFocus();
       this->callingButton->setText(tr("Take Photo"));
       this->callingButton = 0;
     }

@@ -30,16 +30,22 @@
 
 class CameraWidget : public QWidget
 {
+  Q_OBJECT
 public:
   CameraWidget(QWidget *parent = 0);
   ~CameraWidget();
 
-  QPixmap Capture();
+  QPixmap Capture(int framesToStall);
 
 private:
   QImage frame;
   QLabel *content;
   CvCapture *camera;
+
+  int framesToStall;
+  QPixmap freezeFrame;
+
+  bool flashWhite;
 
   void timerEvent(QTimerEvent*);
 };

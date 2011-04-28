@@ -45,7 +45,10 @@
 CameraWidget::CameraWidget(QWidget *parent)
   : QWidget(parent),
   content(new QLabel),
-  frame(QApplication::translate("defaultImage", "loading.jpg"))
+  frame(tr("loading.jpg")),
+  framesToStall(0),
+  freezeFrame(frame.size()),
+  flashWhite(false)
 {
 #ifdef _DEBUG
   if (this->frame.isNull())
@@ -62,6 +65,7 @@ CameraWidget::CameraWidget(QWidget *parent)
   else
   {
     this->content->setPixmap(QPixmap::fromImage(this->frame));
+    this->freezeFrame.fill();
   }
 
   QLayout *temp = new QVBoxLayout;
@@ -83,8 +87,11 @@ CameraWidget::~CameraWidget()
   cvReleaseCapture(&this->camera);
 }
 
-QPixmap CameraWidget::Capture()
+QPixmap CameraWidget::Capture(int framesToStall)
 {
+  this->flashWhite = true;
+  this->framesToStall = framesToStall;
+  this->freezeFrame = QPixmap::fromImage(this->frame);
   return QPixmap::fromImage(this->frame);
 }
 
@@ -114,11 +121,30 @@ void CameraWidget::timerEvent(QTimerEvent*)
         this->frame.setPixel(x, y, qRgb(r, g, b));
       }
     }
+    
+    if (this->framesToStall > 0)
+    {
+      --(this->framesToStall);
 
-    this->content->setPixmap(QPixmap::fromImage(this->frame));
+      if (this->flashWhite)
+      {
+        this->flashWhite = false;
+        QPixmap temp(this->frame.size());
+        temp.fill();
+        this->content->setPixmap(temp);
+      }
+      else
+      {
+        this->content->setPixmap(this->freezeFrame);
+      }
+    }
+    else
+    {
+      this->content->setPixmap(QPixmap::fromImage(this->frame));
+    }
   }
   else
   {
-    this->content->setText(QApplication::translate("unsupportedCamera", "The camera format is unsupported.\n(Should be 8 bit RGB or equivalent.)"));
+    this->content->setText(tr("The camera format is unsupported.\n(Should be 8 bit RGB or equivalent.)"));
   }
 }

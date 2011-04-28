@@ -50,7 +50,7 @@ int main(int argc, char **argv)
 
     QHBoxLayout *buttonLayout = new QHBoxLayout;
     QPushButton *captureButton = new QPushButton(QApplication::translate("capture",
-                                                                         "Take Photo"));
+                                                                         "Take& Photo"));
     buttonLayout->addWidget(captureButton, 1);
     
     QObject::connect(captureButton,
@@ -59,7 +59,7 @@ int main(int argc, char **argv)
                      SLOT(capture()));
 
     QPushButton *settingsButton = new QPushButton(QIcon("cog.png"),
-                                                  QApplication::translate("settingsText", "Settings"));
+                                                  QApplication::translate("settingsText", "&Settings"));
     buttonLayout->addWidget(settingsButton);
 
     QObject::connect(settingsButton,

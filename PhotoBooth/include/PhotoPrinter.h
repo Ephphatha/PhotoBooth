@@ -67,6 +67,7 @@ private:
     unsigned int numFrames;
     unsigned int framesPerPage;
     float delayPerFrame;
+    unsigned int framesToStall;
 
     Settings();
   } settings;
